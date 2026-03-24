@@ -4,6 +4,8 @@ import type { SpinResult, WinLine } from '../api/slotApi';
 
 const REEL_STOP_DELAY_BASE = 0.6;  // seconds per reel gap
 const MIN_SPIN_DURATION = 1.5;     // minimum spin duration before stopping
+const FAST_REEL_STOP_DELAY_BASE = 0.16;
+const FAST_MIN_SPIN_DURATION = 0.4;
 
 interface SlotMachineProps {
   lastResult: SpinResult | null;
@@ -12,7 +14,8 @@ interface SlotMachineProps {
 }
 
 export interface SlotMachineHandle {
-  playSpinAnimation: (result: SpinResult) => Promise<void>;
+  playSpinAnimation: (result: SpinResult, fastSpin: boolean) => Promise<void>;
+  skipToResult: () => void;
 }
 
 import { forwardRef, useImperativeHandle } from 'react';
@@ -41,14 +44,20 @@ const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
     const [activeWinLineIndex, setActiveWinLineIndex] = useState(0);
 
     useImperativeHandle(ref, () => ({
-      async playSpinAnimation(result: SpinResult) {
+      async playSpinAnimation(result: SpinResult, fastSpin: boolean) {
+        const baseDelay = fastSpin ? FAST_REEL_STOP_DELAY_BASE : REEL_STOP_DELAY_BASE;
+        const minimumDuration = fastSpin ? FAST_MIN_SPIN_DURATION : MIN_SPIN_DURATION;
+
         const animationPromises = result.reels.map((reelSymbols, i) => {
           const reel = reelRefs.current[i];
           if (!reel) return Promise.resolve();
-          const stopDelay = MIN_SPIN_DURATION + i * REEL_STOP_DELAY_BASE;
+          const stopDelay = minimumDuration + i * baseDelay;
           return reel.spin(reelSymbols, stopDelay);
         });
         await Promise.all(animationPromises);
+      },
+      skipToResult() {
+        reelRefs.current.forEach(reel => reel?.skipToResult());
       },
     }));
 

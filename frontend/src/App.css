@@ -287,6 +287,68 @@
   cursor: not-allowed;
 }
 
+.fast-spin-button {
+  min-width: 130px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: #eee;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fast-spin-button:hover:not(:disabled) {
+  border-color: #f5c518;
+  color: #f5c518;
+}
+
+.fast-spin-button.active {
+  background: rgba(245, 197, 24, 0.18);
+  border-color: #f5c518;
+  color: #f5c518;
+  box-shadow: 0 0 18px rgba(245, 197, 24, 0.22);
+}
+
+.fast-spin-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.auto-spin-button {
+  min-width: 130px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: #eee;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.auto-spin-button:hover:not(:disabled) {
+  border-color: #7de2a7;
+  color: #7de2a7;
+}
+
+.auto-spin-button.active {
+  background: rgba(125, 226, 167, 0.16);
+  border-color: #7de2a7;
+  color: #7de2a7;
+  box-shadow: 0 0 18px rgba(125, 226, 167, 0.2);
+}
+
+.auto-spin-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .spin-button {
   min-width: 120px;
   height: 52px;

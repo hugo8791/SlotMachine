@@ -1,17 +1,18 @@
 interface SpinButtonProps {
   onClick: () => void;
   disabled: boolean;
-  spinning: boolean;
+  active: boolean;
+  label: string;
 }
 
-export default function SpinButton({ onClick, disabled, spinning }: SpinButtonProps) {
+export default function SpinButton({ onClick, disabled, active, label }: SpinButtonProps) {
   return (
     <button
-      className={`spin-button ${spinning ? 'spinning' : ''}`}
+      className={`spin-button ${active ? 'spinning' : ''}`}
       onClick={onClick}
       disabled={disabled}
     >
-      {spinning ? 'Spinning...' : 'SPIN'}
+      {label}
     </button>
   );
 }

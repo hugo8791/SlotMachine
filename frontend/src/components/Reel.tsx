@@ -5,6 +5,7 @@ const SYMBOL_HEIGHT = 120; // px
 
 export interface ReelHandle {
   spin: (finalSymbols: string[], stopDelay: number) => Promise<void>;
+  skipToResult: () => void;
 }
 
 interface ReelProps {
@@ -19,6 +20,22 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['üçí', 'üç
   const stripRef = useRef<HTMLDivElement>(null);
   const [visibleSymbols, setVisibleSymbols] = useState<string[]>(initialSymbols);
   const [spinStrip, setSpinStrip] = useState<string[] | null>(null);
+  const activeSpinRef = useRef<{ finalSymbols: string[]; resolve: () => void } | null>(null);
+  const visibleSymbolsRef = useRef<string[]>(initialSymbols);
+
+  function finishSpin(finalSymbols: string[]) {
+    if (stripRef.current) {
+      gsap.killTweensOf(stripRef.current);
+    }
+
+    visibleSymbolsRef.current = finalSymbols;
+    setVisibleSymbols(finalSymbols);
+    setSpinStrip(null);
+
+    const activeSpin = activeSpinRef.current;
+    activeSpinRef.current = null;
+    activeSpin?.resolve();
+  }
 
   useLayoutEffect(() => {
     if (spinStrip === null && stripRef.current) {
@@ -26,10 +43,18 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['üçí', 'üç
     }
   }, [spinStrip]);
 
+  useLayoutEffect(() => {
+    visibleSymbolsRef.current = visibleSymbols;
+  }, [visibleSymbols]);
+
   useImperativeHandle(ref, () => ({
     async spin(finalSymbols: string[], stopDelay: number): Promise<void> {
       const strip = stripRef.current;
       if (!strip) return;
+
+      if (activeSpinRef.current) {
+        finishSpin(activeSpinRef.current.finalSymbols);
+      }
 
       gsap.killTweensOf(strip);
       gsap.set(strip, { y: 0 });
@@ -38,7 +63,7 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['üçí', 'üç
         ALL_SYMBOLS[Math.floor(Math.random() * ALL_SYMBOLS.length)]
       );
       // Prepend current visible symbols so y:0 shows the same thing as before ‚Äî no visual jump
-      const currentSymbols = visibleSymbols;
+      const currentSymbols = visibleSymbolsRef.current;
       const fullStrip = [...currentSymbols, ...extras, ...finalSymbols];
       setSpinStrip(fullStrip);
 
@@ -46,18 +71,23 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['üçí', 'üç
       const endY = -((currentSymbols.length + extras.length) * SYMBOL_HEIGHT);
 
       return new Promise<void>(resolve => {
+        activeSpinRef.current = { finalSymbols, resolve };
+
         gsap.to(strip, {
             y: endY,
             duration: stopDelay + 0.8,
             ease: 'power2.inOut',
             onComplete: () => {
-              setVisibleSymbols(finalSymbols);
-              setSpinStrip(null);
-              resolve();
+              finishSpin(finalSymbols);
             },
           }
         );
       });
+    },
+    skipToResult() {
+      if (activeSpinRef.current) {
+        finishSpin(activeSpinRef.current.finalSymbols);
+      }
     },
   }));
 
