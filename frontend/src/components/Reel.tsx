@@ -12,7 +12,7 @@ interface ReelProps {
   highlightedRows?: Set<number>;
 }
 
-const ALL_SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '⭐', '7️⃣'];
+const ALL_SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '⭐', '🃏', '7️⃣'];
 const EXTRA_COUNT = 12;
 
 const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '🍋', '🍇'], highlightedRows }, ref) => {

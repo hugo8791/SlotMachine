@@ -83,7 +83,7 @@ const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
     const displayReels: string[][] = lastResult?.reels ?? [
       ['🍒', '🍋', '🍇'],
       ['🔔', '💎', '⭐'],
-      ['7️⃣', '🍒', '🍋'],
+      ['🃏', '🍒', '🍋'],
       ['🍇', '🔔', '💎'],
       ['⭐', '7️⃣', '🍒'],
     ];

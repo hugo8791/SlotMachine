@@ -4,28 +4,39 @@ namespace SlotMachine.Services;
 
 public class SlotService
 {
+    private const string CherrySymbol = "🍒";
+    private const string LemonSymbol = "🍋";
+    private const string GrapeSymbol = "🍇";
+    private const string BellSymbol = "🔔";
+    private const string DiamondSymbol = "💎";
+    private const string StarSymbol = "⭐";
+    private const string WildSymbol = "🃏";
+    private const string SevenSymbol = "7️⃣";
+
     // Symbols ordered by value (low → high). Higher weight = appears more often.
     private static readonly (string Symbol, int Weight)[] WeightedSymbols =
     [
-        ("🍒", 30),
-        ("🍋", 25),
-        ("🍇", 20),
-        ("🔔", 12),
-        ("💎", 8),
-        ("⭐", 4),
-        ("7️⃣", 1),
+        (CherrySymbol, 30),
+        (LemonSymbol, 25),
+        (GrapeSymbol, 20),
+        (BellSymbol, 12),
+        (DiamondSymbol, 8),
+        (StarSymbol, 4),
+        (WildSymbol, 2),
+        (SevenSymbol, 1),
     ];
 
     // Payout multipliers: symbol → [match3, match4, match5]
     private static readonly Dictionary<string, int[]> Payouts = new()
     {
-        ["🍒"]  = [5,   10,  20],
-        ["🍋"]  = [8,   15,  30],
-        ["🍇"]  = [10,  20,  40],
-        ["🔔"]  = [15,  30,  60],
-        ["💎"]  = [20,  40,  80],
-        ["⭐"]  = [30,  60,  120],
-        ["7️⃣"] = [50,  100, 200],
+        [CherrySymbol] = [5,   10,  20],
+        [LemonSymbol] = [8,   15,  30],
+        [GrapeSymbol] = [10,  20,  40],
+        [BellSymbol] = [15,  30,  60],
+        [DiamondSymbol] = [20,  40,  80],
+        [StarSymbol] = [30,  60,  120],
+        [WildSymbol] = [75,  150, 300],
+        [SevenSymbol] = [50,  100, 200],
     };
 
     // 20 paylines: each is an array of 5 row indices (0=top, 1=mid, 2=bottom), one per reel.
@@ -95,26 +106,52 @@ public class SlotService
         for (int i = 0; i < Paylines.Length; i++)
         {
             var line = Paylines[i];
-            var first = grid[0][line[0]];
-            int count = 1;
+            var lineSymbols = Enumerable.Range(0, 5)
+                .Select(reel => grid[reel][line[reel]])
+                .ToArray();
+            var symbol = ResolveWinningSymbol(lineSymbols, out int count);
 
-            for (int reel = 1; reel < 5; reel++)
-            {
-                if (grid[reel][line[reel]] == first)
-                    count++;
-                else
-                    break;
-            }
-
-            if (count >= 3 && Payouts.TryGetValue(first, out var payoutTable))
+            if (count >= 3 && Payouts.TryGetValue(symbol, out var payoutTable))
             {
                 int multiplier = payoutTable[count - 3]; // index 0=match3, 1=match4, 2=match5
                 int linePayout = multiplier * bet;
                 totalWin += linePayout;
-                winningLines.Add(new WinLine(i + 1, first, count, linePayout, line[..count]));
+                winningLines.Add(new WinLine(i + 1, symbol, count, linePayout, line[..count]));
             }
         }
 
         return (totalWin, winningLines);
+    }
+
+    private static string ResolveWinningSymbol(IReadOnlyList<string> lineSymbols, out int count)
+    {
+        string? resolvedSymbol = null;
+        count = 0;
+
+        foreach (var symbol in lineSymbols)
+        {
+            if (resolvedSymbol is null)
+            {
+                count++;
+
+                // Leading wilds stay unresolved until we encounter a concrete symbol.
+                if (symbol != WildSymbol)
+                {
+                    resolvedSymbol = symbol;
+                }
+
+                continue;
+            }
+
+            if (symbol == resolvedSymbol || symbol == WildSymbol)
+            {
+                count++;
+                continue;
+            }
+
+            break;
+        }
+
+        return resolvedSymbol ?? WildSymbol;
     }
 }
