@@ -4,22 +4,24 @@ import gsap from 'gsap';
 const SYMBOL_HEIGHT = 120; // px
 
 export interface ReelHandle {
-  spin: (finalSymbols: string[], stopDelay: number) => Promise<void>;
+  spin: (finalSymbols: string[], stopDelay: number, lockedRows?: Set<number>) => Promise<void>;
   skipToResult: () => void;
 }
 
 interface ReelProps {
   initialSymbols?: string[];
   highlightedRows?: Set<number>;
+  stickyRows?: Set<number>;
 }
 
-const ALL_SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '⭐', '🃏', '7️⃣'];
+const ALL_SYMBOLS = ['🍒', '🍋', '🍇', '🔔', '💎', '⭐', '🎁', '🃏', '7️⃣'];
 const EXTRA_COUNT = 12;
 
-const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '🍋', '🍇'], highlightedRows }, ref) => {
+const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '🍋', '🍇'], highlightedRows, stickyRows }, ref) => {
   const stripRef = useRef<HTMLDivElement>(null);
   const [visibleSymbols, setVisibleSymbols] = useState<string[]>(initialSymbols);
   const [spinStrip, setSpinStrip] = useState<string[] | null>(null);
+  const [spinningLockedRows, setSpinningLockedRows] = useState<Set<number> | null>(null);
   const activeSpinRef = useRef<{ finalSymbols: string[]; resolve: () => void } | null>(null);
   const visibleSymbolsRef = useRef<string[]>(initialSymbols);
 
@@ -31,6 +33,7 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '�
     visibleSymbolsRef.current = finalSymbols;
     setVisibleSymbols(finalSymbols);
     setSpinStrip(null);
+    setSpinningLockedRows(null);
 
     const activeSpin = activeSpinRef.current;
     activeSpinRef.current = null;
@@ -48,7 +51,7 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '�
   }, [visibleSymbols]);
 
   useImperativeHandle(ref, () => ({
-    async spin(finalSymbols: string[], stopDelay: number): Promise<void> {
+    async spin(finalSymbols: string[], stopDelay: number, lockedRows?: Set<number>): Promise<void> {
       const strip = stripRef.current;
       if (!strip) return;
 
@@ -58,6 +61,7 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '�
 
       gsap.killTweensOf(strip);
       gsap.set(strip, { y: 0 });
+      setSpinningLockedRows(lockedRows ? new Set(lockedRows) : null);
 
       const extras = Array.from({ length: EXTRA_COUNT }, () =>
         ALL_SYMBOLS[Math.floor(Math.random() * ALL_SYMBOLS.length)]
@@ -99,12 +103,21 @@ const Reel = forwardRef<ReelHandle, ReelProps>(({ initialSymbols = ['🍒', '�
         {symbols.map((symbol, i) => (
           <div
             key={i}
-            className={`reel-symbol${spinStrip === null && highlightedRows?.has(i) ? ' reel-symbol-winning' : ''}`}
+            className={[
+              'reel-symbol',
+              spinStrip === null && highlightedRows?.has(i) ? 'reel-symbol-winning' : '',
+              spinStrip === null && stickyRows?.has(i) ? 'reel-symbol-sticky' : '',
+            ].filter(Boolean).join(' ')}
           >
             {symbol}
           </div>
         ))}
       </div>
+      {spinningLockedRows && Array.from(spinningLockedRows).map(row => (
+        <div key={row} className="reel-symbol reel-symbol-sticky reel-symbol-sticky-overlay" style={{ top: `${row * SYMBOL_HEIGHT}px` }}>
+          🃏
+        </div>
+      ))}
     </div>
   );
 });

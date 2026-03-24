@@ -12,6 +12,16 @@ public class SlotService
     private const string StarSymbol = "⭐";
     private const string WildSymbol = "🃏";
     private const string SevenSymbol = "7️⃣";
+    private const string ScatterSymbol = "🎁";
+    private const int BonusTriggerCount = 3;
+    private const int FreeSpinsAward = 10;
+    private const int RetriggerAward = 5;
+    private static readonly StickyPosition[] DebugStickyWildPositions =
+    [
+        new(0, 1),
+        new(2, 0),
+        new(4, 2),
+    ];
 
     // Symbols ordered by value (low → high). Higher weight = appears more often.
     private static readonly (string Symbol, int Weight)[] WeightedSymbols =
@@ -22,6 +32,7 @@ public class SlotService
         (BellSymbol, 12),
         (DiamondSymbol, 8),
         (StarSymbol, 4),
+        (ScatterSymbol, 3),
         (WildSymbol, 2),
         (SevenSymbol, 1),
     ];
@@ -65,16 +76,96 @@ public class SlotService
     ];
 
     private static readonly int TotalWeight = WeightedSymbols.Sum(s => s.Weight);
-    private readonly Random _rng = new();
 
-    public SpinResult Spin(int bet)
+    public SpinOutcome Spin(int requestedBet, BonusRoundState? currentBonusState)
     {
-        var grid = GenerateGrid();
+        bool isBonusSpin = currentBonusState?.IsActive == true;
+        int bet = isBonusSpin ? currentBonusState!.LockedBet : requestedBet;
+        var startingStickyPositions = isBonusSpin
+            ? currentBonusState!.StickyWildPositions
+            : Array.Empty<StickyPosition>();
+
+        var grid = GenerateGrid(startingStickyPositions);
+        int scatterCount = CountSymbols(grid, ScatterSymbol);
         var (winAmount, winningLines) = EvaluatePaylines(grid, bet);
-        return new SpinResult(grid, winAmount, winningLines);
+
+        bool isBonusTrigger = !isBonusSpin && scatterCount >= BonusTriggerCount;
+        bool isBonusComplete = false;
+        int completedBonusWinAmount = 0;
+        int spinsAwarded = 0;
+        BonusRoundState? nextBonusState = null;
+
+        if (isBonusSpin)
+        {
+            var stickyWildPositions = CollectStickyWildPositions(grid, currentBonusState!.StickyWildPositions);
+            int freeSpinsRemaining = currentBonusState.FreeSpinsRemaining - 1;
+            int totalBonusWin = currentBonusState.TotalBonusWin + winAmount;
+
+            if (scatterCount >= BonusTriggerCount)
+            {
+                freeSpinsRemaining += RetriggerAward;
+                spinsAwarded = RetriggerAward;
+            }
+
+            if (freeSpinsRemaining > 0)
+            {
+                nextBonusState = new BonusRoundState(
+                    freeSpinsRemaining,
+                    currentBonusState.LockedBet,
+                    stickyWildPositions,
+                    totalBonusWin
+                );
+            }
+            else
+            {
+                isBonusComplete = true;
+                completedBonusWinAmount = totalBonusWin;
+            }
+        }
+        else if (isBonusTrigger)
+        {
+            spinsAwarded = FreeSpinsAward;
+            nextBonusState = new BonusRoundState(
+                FreeSpinsAward,
+                bet,
+                Array.Empty<StickyPosition>(),
+                0
+            );
+        }
+
+        var bonusState = new BonusState(
+            Active: nextBonusState?.IsActive == true,
+            FreeSpinsRemaining: nextBonusState?.FreeSpinsRemaining ?? 0,
+            LockedBet: nextBonusState?.LockedBet ?? 0,
+            StickyWildPositions: nextBonusState?.StickyWildPositions ?? Array.Empty<StickyPosition>(),
+            SpinsAwarded: spinsAwarded,
+            TotalBonusWin: nextBonusState?.TotalBonusWin ?? (isBonusComplete ? completedBonusWinAmount : 0)
+        );
+
+        var result = new SpinResult(
+            grid,
+            winAmount,
+            winningLines,
+            isBonusTrigger,
+            scatterCount,
+            isBonusSpin ? "bonus" : "base",
+            bonusState,
+            isBonusComplete,
+            completedBonusWinAmount
+        );
+
+        return new SpinOutcome(result, nextBonusState);
     }
 
-    private string[][] GenerateGrid()
+    public BonusRoundState CreateDebugBonusState(int bet, bool withStickyWilds) =>
+        new(
+            FreeSpinsAward,
+            bet,
+            withStickyWilds ? DebugStickyWildPositions : Array.Empty<StickyPosition>(),
+            0
+        );
+
+    private string[][] GenerateGrid(IReadOnlyList<StickyPosition> stickyWildPositions)
     {
         var grid = new string[5][];
         for (int reel = 0; reel < 5; reel++)
@@ -83,12 +174,16 @@ public class SlotService
             for (int row = 0; row < 3; row++)
                 grid[reel][row] = PickSymbol();
         }
+
+        foreach (var position in stickyWildPositions)
+            grid[position.Reel][position.Row] = WildSymbol;
+
         return grid;
     }
 
     private string PickSymbol()
     {
-        int roll = _rng.Next(TotalWeight);
+        int roll = Random.Shared.Next(TotalWeight);
         int cumulative = 0;
         foreach (var (symbol, weight) in WeightedSymbols)
         {
@@ -123,6 +218,31 @@ public class SlotService
         return (totalWin, winningLines);
     }
 
+    private static int CountSymbols(string[][] grid, string symbol) =>
+        grid.Sum(reel => reel.Count(current => current == symbol));
+
+    private static IReadOnlyList<StickyPosition> CollectStickyWildPositions(
+        string[][] grid,
+        IReadOnlyList<StickyPosition> existingStickyWildPositions
+    )
+    {
+        var positions = new HashSet<StickyPosition>(existingStickyWildPositions);
+
+        for (int reel = 0; reel < grid.Length; reel++)
+        {
+            for (int row = 0; row < grid[reel].Length; row++)
+            {
+                if (grid[reel][row] == WildSymbol)
+                    positions.Add(new StickyPosition(reel, row));
+            }
+        }
+
+        return positions
+            .OrderBy(position => position.Reel)
+            .ThenBy(position => position.Row)
+            .ToArray();
+    }
+
     private static string ResolveWinningSymbol(IReadOnlyList<string> lineSymbols, out int count)
     {
         string? resolvedSymbol = null;
@@ -143,7 +263,7 @@ public class SlotService
                 continue;
             }
 
-            if (symbol == resolvedSymbol || symbol == WildSymbol)
+            if (IsMatchingSymbol(resolvedSymbol, symbol))
             {
                 count++;
                 continue;
@@ -153,5 +273,13 @@ public class SlotService
         }
 
         return resolvedSymbol ?? WildSymbol;
+    }
+
+    private static bool IsMatchingSymbol(string resolvedSymbol, string nextSymbol)
+    {
+        if (resolvedSymbol == ScatterSymbol)
+            return nextSymbol == ScatterSymbol;
+
+        return nextSymbol == resolvedSymbol || nextSymbol == WildSymbol;
     }
 }

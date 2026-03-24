@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Reel, { type ReelHandle } from './Reel';
-import type { SpinResult, WinLine } from '../api/slotApi';
+import type { SpinResult, StickyPosition, WinLine } from '../api/slotApi';
 
 const REEL_STOP_DELAY_BASE = 0.6;  // seconds per reel gap
 const MIN_SPIN_DURATION = 1.5;     // minimum spin duration before stopping
@@ -9,12 +9,15 @@ const FAST_MIN_SPIN_DURATION = 0.4;
 
 interface SlotMachineProps {
   lastResult: SpinResult | null;
-  onSpinComplete: (result: SpinResult) => void;
   isAnimating: boolean;
 }
 
 export interface SlotMachineHandle {
-  playSpinAnimation: (result: SpinResult, fastSpin: boolean) => Promise<void>;
+  playSpinAnimation: (
+    result: SpinResult,
+    fastSpin: boolean,
+    lockedStickyPositions?: StickyPosition[]
+  ) => Promise<void>;
   skipToResult: () => void;
 }
 
@@ -44,15 +47,22 @@ const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
     const [activeWinLineIndex, setActiveWinLineIndex] = useState(0);
 
     useImperativeHandle(ref, () => ({
-      async playSpinAnimation(result: SpinResult, fastSpin: boolean) {
+      async playSpinAnimation(result: SpinResult, fastSpin: boolean, lockedStickyPositions: StickyPosition[] = []) {
         const baseDelay = fastSpin ? FAST_REEL_STOP_DELAY_BASE : REEL_STOP_DELAY_BASE;
         const minimumDuration = fastSpin ? FAST_MIN_SPIN_DURATION : MIN_SPIN_DURATION;
+        const lockedRowsByReel = Array.from({ length: 5 }, (_, reelIndex) => {
+          const lockedRows = lockedStickyPositions
+            .filter(position => position.reel === reelIndex)
+            .map(position => position.row);
+
+          return lockedRows.length > 0 ? new Set(lockedRows) : undefined;
+        });
 
         const animationPromises = result.reels.map((reelSymbols, i) => {
           const reel = reelRefs.current[i];
           if (!reel) return Promise.resolve();
           const stopDelay = minimumDuration + i * baseDelay;
-          return reel.spin(reelSymbols, stopDelay);
+          return reel.spin(reelSymbols, stopDelay, lockedRowsByReel[i]);
         });
         await Promise.all(animationPromises);
       },
@@ -89,10 +99,25 @@ const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
       [activeWinLine]
     );
 
+    const stickyRowsByReel = useMemo(
+      () => Array.from({ length: 5 }, (_, reelIndex) => {
+        if (!lastResult) {
+          return undefined;
+        }
+
+        const stickyRows = lastResult.bonusState.stickyWildPositions
+          .filter((position: StickyPosition) => position.reel === reelIndex)
+          .map(position => position.row);
+
+        return stickyRows.length > 0 ? new Set(stickyRows) : undefined;
+      }),
+      [lastResult]
+    );
+
     const displayReels: string[][] = lastResult?.reels ?? [
       ['🍒', '🍋', '🍇'],
       ['🔔', '💎', '⭐'],
-      ['🃏', '🍒', '🍋'],
+      ['🎁', '🍒', '🍋'],
       ['🍇', '🔔', '💎'],
       ['⭐', '7️⃣', '🍒'],
     ];
@@ -107,6 +132,7 @@ const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
                 ref={el => { reelRefs.current[i] = el; }}
                 initialSymbols={symbols}
                 highlightedRows={highlightedRowsByReel[i]}
+                stickyRows={stickyRowsByReel[i]}
               />
             ))}
           </div>

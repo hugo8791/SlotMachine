@@ -48,6 +48,69 @@
   color: #f5c518;
 }
 
+.bonus-status {
+  width: min(100%, 720px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background:
+    linear-gradient(135deg, rgba(245, 197, 24, 0.22), rgba(255, 255, 255, 0.06));
+  border: 1px solid rgba(245, 197, 24, 0.45);
+  border-radius: 16px;
+  padding: 16px 20px;
+  box-shadow: 0 0 32px rgba(245, 197, 24, 0.14);
+}
+
+.bonus-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.bonus-status-kicker {
+  font-size: 0.78rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.bonus-status-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff2b5;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bonus-status-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bonus-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(7, 9, 23, 0.28);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.bonus-stat-label {
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.bonus-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+}
+
 /* ── Slot Machine ────────────────────────────────────── */
 .slot-machine {
   display: flex;
@@ -160,6 +223,36 @@
     radial-gradient(circle at center, rgba(245, 197, 24, 0.35), transparent 68%);
 }
 
+.reel-symbol-sticky {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(125, 226, 167, 0.14), rgba(125, 226, 167, 0.02)),
+    radial-gradient(circle at center, rgba(125, 226, 167, 0.18), transparent 72%);
+  box-shadow: inset 0 0 0 2px rgba(125, 226, 167, 0.55);
+}
+
+.reel-symbol-sticky::after {
+  content: 'LOCKED';
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #7de2a7;
+}
+
+.reel-symbol-sticky-overlay {
+  position: absolute;
+  left: 0;
+  z-index: 4;
+  background:
+    linear-gradient(180deg, rgba(17, 17, 40, 0.88), rgba(17, 17, 40, 0.72)),
+    radial-gradient(circle at center, rgba(125, 226, 167, 0.18), transparent 72%);
+  pointer-events: none;
+}
+
 @keyframes winningSymbolPulse {
   from {
     transform: scale(1);
@@ -242,6 +335,81 @@
   gap: 16px;
   flex-wrap: wrap;
   justify-content: center;
+}
+
+.bonus-lock-note {
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.76);
+}
+
+.dev-tools {
+  width: min(100%, 720px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 16px;
+  border: 1px dashed rgba(125, 226, 167, 0.45);
+  background: rgba(10, 20, 22, 0.38);
+}
+
+.dev-tools-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.dev-tools-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(125, 226, 167, 0.78);
+}
+
+.dev-tools-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #d6ffea;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dev-tools-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dev-tool-button {
+  min-width: 160px;
+  height: 42px;
+  border-radius: 10px;
+  border: 1px solid rgba(125, 226, 167, 0.45);
+  background: rgba(125, 226, 167, 0.12);
+  color: #d6ffea;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dev-tool-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: #7de2a7;
+  box-shadow: 0 8px 18px rgba(125, 226, 167, 0.14);
+}
+
+.dev-tool-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dev-tool-button-danger {
+  border-color: rgba(255, 124, 124, 0.45);
+  background: rgba(255, 124, 124, 0.12);
+  color: #ffc3c3;
 }
 
 .bet-controls {
@@ -439,6 +607,12 @@
   font-size: 2rem;
   font-weight: 700;
   color: #fff;
+  margin-bottom: 12px;
+}
+
+.win-modal-subtitle {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
   margin-bottom: 32px;
 }
 
@@ -459,6 +633,28 @@
 }
 
 @media (max-width: 760px) {
+  .bonus-status {
+    padding: 14px 16px;
+  }
+
+  .bonus-status-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .bonus-status-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dev-tools {
+    padding: 14px 16px;
+  }
+
+  .dev-tools-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .reels-container {
     gap: 6px;
     padding: 12px;
@@ -473,5 +669,10 @@
     width: 68px;
     height: 68px;
     font-size: 2rem;
+  }
+
+  .reel-symbol-sticky::after {
+    font-size: 0.4rem;
+    bottom: 4px;
   }
 }
