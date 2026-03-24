@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Reel, { type ReelHandle } from './Reel';
-import type { SpinResult, StickyPosition, WinLine } from '../api/slotApi';
+import type { BonusState, SpinResult, StickyPosition, WinLine } from '../api/slotApi';
 
 const REEL_STOP_DELAY_BASE = 0.6;  // seconds per reel gap
 const MIN_SPIN_DURATION = 1.5;     // minimum spin duration before stopping
@@ -9,6 +9,7 @@ const FAST_MIN_SPIN_DURATION = 0.4;
 
 interface SlotMachineProps {
   lastResult: SpinResult | null;
+  bonusState: BonusState;
   isAnimating: boolean;
 }
 
@@ -42,7 +43,7 @@ function buildPaylinePoints(line: WinLine): string {
 }
 
 const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
-  ({ lastResult, isAnimating }, ref) => {
+  ({ lastResult, bonusState, isAnimating }, ref) => {
     const reelRefs = useRef<(ReelHandle | null)[]>([null, null, null, null, null]);
     const [activeWinLineIndex, setActiveWinLineIndex] = useState(0);
 
@@ -105,13 +106,13 @@ const SlotMachine = forwardRef<SlotMachineHandle, SlotMachineProps>(
           return undefined;
         }
 
-        const stickyRows = lastResult.bonusState.stickyWildPositions
+        const stickyRows = bonusState.stickyWildPositions
           .filter((position: StickyPosition) => position.reel === reelIndex)
           .map(position => position.row);
 
         return stickyRows.length > 0 ? new Set(stickyRows) : undefined;
       }),
-      [lastResult]
+      [bonusState.stickyWildPositions, lastResult]
     );
 
     const displayReels: string[][] = lastResult?.reels ?? [

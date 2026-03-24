@@ -22,5 +22,6 @@ public record SpinResult(
     string SpinMode,
     BonusState BonusState,
     bool IsBonusComplete,
-    int CompletedBonusWinAmount
+    int CompletedBonusWinAmount,
+    int Balance
 );

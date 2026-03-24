@@ -151,7 +151,8 @@ public class SlotService
             isBonusSpin ? "bonus" : "base",
             bonusState,
             isBonusComplete,
-            completedBonusWinAmount
+            completedBonusWinAmount,
+            0
         );
 
         return new SpinOutcome(result, nextBonusState);

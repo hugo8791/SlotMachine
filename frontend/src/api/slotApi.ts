@@ -32,11 +32,19 @@ export interface SpinResult {
   bonusState: BonusState;
   isBonusComplete: boolean;
   completedBonusWinAmount: number;
+  balance: number;
 }
 
 export interface DebugBonusRequest {
   bet: number;
   withStickyWilds: boolean;
+}
+
+export interface GameStateResponse {
+  balance: number;
+  bet: number;
+  lastResult: SpinResult | null;
+  bonusState: BonusState;
 }
 
 export async function spinReels(bet: number): Promise<SpinResult> {
@@ -48,6 +56,30 @@ export async function spinReels(bet: number): Promise<SpinResult> {
 
   if (!response.ok) {
     throw new Error(`Spin failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function getGameState(): Promise<GameStateResponse> {
+  const response = await fetch('/api/state');
+
+  if (!response.ok) {
+    throw new Error(`State load failed: ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+export async function updateBet(bet: number): Promise<GameStateResponse> {
+  const response = await fetch('/api/state/bet', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bet }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Bet update failed: ${response.statusText}`);
   }
 
   return response.json();

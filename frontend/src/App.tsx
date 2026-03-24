@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSlotGame } from './hooks/useSlotGame';
+import type { BonusState } from './api/slotApi';
 import SlotMachine, { type SlotMachineHandle } from './components/SlotMachine';
 import BalanceDisplay from './components/BalanceDisplay';
 import BetControls from './components/BetControls';
@@ -21,12 +22,15 @@ interface ModalState {
 }
 
 export default function App() {
-  const { balance, bet, spinning, lastResult, error, bonusState, setBet, spin, setBonusState, clearError } = useSlotGame();
+  const { balance, bet, spinning, loading, lastResult, error, bonusState, setBet, spin, applySpinResult, setBonusState, clearError } = useSlotGame();
   const slotMachineRef = useRef<SlotMachineHandle>(null);
   const [modalState, setModalState] = useState<ModalState | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [animatingBonusState, setAnimatingBonusState] = useState<BonusState | null>(null);
   const [fastSpinEnabled, setFastSpinEnabled] = useState(false);
   const [autoSpinEnabled, setAutoSpinEnabled] = useState(false);
+
+  const displayBonusState = isAnimating && animatingBonusState ? animatingBonusState : bonusState;
 
   async function handleSpin() {
     if (isAnimating) {
@@ -34,13 +38,17 @@ export default function App() {
       return;
     }
 
+    const bonusStateBeforeSpin = bonusState.active ? bonusState : null;
     const lockedStickyPositions = bonusState.active ? bonusState.stickyWildPositions : [];
     const result = await spin();
     if (!result) return;
 
+    setAnimatingBonusState(bonusStateBeforeSpin);
     setIsAnimating(true);
     await slotMachineRef.current?.playSpinAnimation(result, fastSpinEnabled, lockedStickyPositions);
     setIsAnimating(false);
+    setAnimatingBonusState(null);
+    applySpinResult(result);
 
     if (result.isBonusTrigger) {
       setAutoSpinEnabled(false);
@@ -155,11 +163,12 @@ export default function App() {
       <h1 className="app-title">Slot Machine</h1>
 
       <BalanceDisplay balance={balance} />
-      <BonusStatus bonusState={bonusState} />
+      <BonusStatus bonusState={displayBonusState} />
 
       <SlotMachine
         ref={slotMachineRef}
         lastResult={lastResult}
+        bonusState={bonusState}
         isAnimating={isAnimating}
       />
 
@@ -183,10 +192,12 @@ export default function App() {
         </button>
         <SpinButton
           onClick={handleSpin}
-          disabled={spinning || (!isAnimating && !bonusState.active && balance < bet)}
+          disabled={loading || spinning || (!isAnimating && !bonusState.active && balance < bet)}
           active={spinning || isAnimating}
           label={
-            spinning
+            loading
+              ? 'Loading...'
+              : spinning
               ? 'Spinning...'
               : isAnimating
                 ? 'Stop'
@@ -196,9 +207,9 @@ export default function App() {
           }
         />
       </div>
-      {bonusState.active && (
+      {displayBonusState.active && (
         <div className="bonus-lock-note">
-          Bonus bet locked at {bonusState.lockedBet}. Bonus spins do not cost credits.
+          Bonus bet locked at {displayBonusState.lockedBet}. Bonus spins do not cost credits.
         </div>
       )}
       {IS_DEV && (
